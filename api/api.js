@@ -1,21 +1,13 @@
 const express = require('express');
 
+const lobbiesRoute = require('./routes/lobbies.js');
+const reputationRoute = require('./routes/reputation.js');
+const tagsRoute = require('./routes/tags.js');
+
 const app = express();
 
-app.get('/lobbies', async (req, res) => {
-    res.send('Lobbies response')
-});
-
-app.get('/profile', async (req, res) => {
-    res.send('Profile response')
-});
-
-app.get('/reputation', async (req, res) => {
-    res.send('Reputation response')
-});
-
-app.get('/tags', async (req, res) => {
-    res.send('Tags respond')
-});
+app.use('/lobbies', lobbiesRoute)
+app.use('/reputation', reputationRoute)
+app.use('/tags', tagsRoute)
 
 app.listen(3000);
