@@ -2,58 +2,109 @@ const express = require('express');
 
 const router = express.Router();
 
-router.get('/get/:guildId/:tagName', async (req, res) => {
-    const { guildId, tagName } = req.params
-    res.send('Send tag information')
+router.get('/:guildId/count', async (request, response) => {
+    const { guildId } = request.params;
+    response.json({
+        operation: 'Guild tag count',
+        guildId: guildId
+    })
 })
 
-router.get('/list/:guildId', async (req, res) => {
-    const { guildId } = req.params
-    res.send('List guild tags')
+router.get('/:guildId/:memberId/count', async (request, response) => {
+    const { guildId, memberId } = request.params;
+    response.json({
+        operation: 'Guild member tag count',
+        guildId: guildId,
+        memberId: memberId
+    })
 })
 
-router.get('/list/:guildId/:authorId', async (req, res) => {
-    const { guildId, authorId } = req.params
-    res.send('List guild author tags')
+router.get('/:guildId/list', async (request, response) => {
+    const { guildId } = request.params;
+    response.json({
+        operation: 'Guild tag list',
+        guildId: guildId
+    })
 })
 
-router.get('/count/:guildId', async (req, res) => {
-    const { guildId } = req.params
-    res.send('Count guild tags')
+router.get('/:guildId/:memberId/list', async (request, response) => {
+    const { guildId, memberId } = request.params;
+    response.json({
+        operation: 'Guild member tag list',
+        guildId: guildId,
+        memberId: memberId
+    })
 })
 
-router.get('/count/:guildId/:authorId', async (req, res) => {
-    const { guildId, authorId } = req.params
-    res.send('Count guild author tags')
+router.get('/:guildId/get', async (request, response) => {
+    const { guildId } = request.params;
+    const { tagName } = request.body;
+    response.json({
+        operation: 'Guild get tag',
+        guildId: guildId,
+        tagName: tagName
+    })
 })
 
-router.patch('/increment/:guildId/:tagName', async (req, res) => {
-    res.send('Increment tag uses')
+router.post('/:guildId/create', async (request, response) => {
+    const { guildId } = request.params;
+    const { tagName, tagContent, tagAuthor } = request.body;
+    response.json({
+        operation: 'Guild create tag',
+        guildId: guildId,
+        tagName: tagName,
+        tagContent: tagContent,
+        tagAuthor: tagAuthor
+    })
 })
 
-router.patch('/decrement/:guildId/:tagName', async (req, res) => {
-    res.send('Decrement tag uses')
+router.delete('/:guildId/delete', async (request, response) => {
+    const { guildId } = request.params;
+    const { tagName } = request.body;
+    response.json({
+        operation: 'Guild delete tag',
+        guildId: guildId,
+        tagName: tagName
+    })
 })
 
-router.patch('/edit/:guildId/:authorId/:tagName', async (req, res) => {
-    const { guildId, authorId, tagName } = req.params
-    const { tagContent } = req.body
-    res.send('Update guild tag')
+router.put('/:guildId/edit', async (request, response) => {
+    const { guildId } = request.params;
+    const { tagName, tagContent } = request.body;
+    response.json({
+        operation: 'Guild edit tag',
+        guildId: guildId,
+        tagName: tagName,
+        tagContent: tagContent
+    })
 })
 
-router.post('/create', async (req, res) => {
-    const { guildId, authorId, tagName, tagContent } = req.body
-    res.send('Create guild tag')
+router.put('/:guildId/increment', async (request, response) => {
+    const { guildId } = request.params;
+    const { tagName } = request.body;
+    response.json({
+        operation: 'Guild increment tag',
+        guildId: guildId,
+        tagName: tagName
+    })
 })
 
-router.delete('/delete/:guildId/:authorId/:tagName', async (req, res) => {
-    const { guildId, authorId, tagName } = req.params
-    res.send('Deletes guild tag')
+router.put('/:guildId/decrement', async (request, response) => {
+    const { guildId } = request.params;
+    const { tagName } = request.body;
+    response.json({
+        operation: 'Guild decrement tag',
+        guildId: guildId,
+        tagName: tagName
+    })
 })
 
-router.delete('/purge/:guildId/:authorId', async (req, res) => {
-    const { guildId, authorId } = req.params
-    res.send('Purges all guild tags')
+router.delete('/:guildId/purge', async (request, response) => {
+    const { guildId } = request.params;
+    response.json({
+        operation: 'Guild purge',
+        guildId: guildId
+    })
 })
 
 module.exports = router
