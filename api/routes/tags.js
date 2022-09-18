@@ -1,8 +1,9 @@
 const express = require('express');
+const mongodb = require('mongodb');
 
 const router = express.Router();
 
-router.get('/:guildId/count', async (request, response) => {
+router.get('/count/:guildId', async (request, response) => {
     const { guildId } = request.params;
     response.json({
         operation: 'Guild tag count',
@@ -10,7 +11,7 @@ router.get('/:guildId/count', async (request, response) => {
     })
 })
 
-router.get('/:guildId/:memberId/count', async (request, response) => {
+router.get('/count/:guildId/:memberId', async (request, response) => {
     const { guildId, memberId } = request.params;
     response.json({
         operation: 'Guild member tag count',
@@ -19,7 +20,7 @@ router.get('/:guildId/:memberId/count', async (request, response) => {
     })
 })
 
-router.get('/:guildId/list', async (request, response) => {
+router.get('/list/:guildId', async (request, response) => {
     const { guildId } = request.params;
     response.json({
         operation: 'Guild tag list',
@@ -27,7 +28,7 @@ router.get('/:guildId/list', async (request, response) => {
     })
 })
 
-router.get('/:guildId/:memberId/list', async (request, response) => {
+router.get('/list/:guildId/:memberId', async (request, response) => {
     const { guildId, memberId } = request.params;
     response.json({
         operation: 'Guild member tag list',
@@ -36,7 +37,7 @@ router.get('/:guildId/:memberId/list', async (request, response) => {
     })
 })
 
-router.get('/:guildId/get', async (request, response) => {
+router.get('/get/:guildId', async (request, response) => {
     const { guildId } = request.params;
     const { tagName } = request.body;
     response.json({
@@ -46,7 +47,7 @@ router.get('/:guildId/get', async (request, response) => {
     })
 })
 
-router.post('/:guildId/create', async (request, response) => {
+router.post('/create/:guildId', async (request, response) => {
     const { guildId } = request.params;
     const { tagName, tagContent, tagAuthor } = request.body;
     response.json({
@@ -58,7 +59,7 @@ router.post('/:guildId/create', async (request, response) => {
     })
 })
 
-router.delete('/:guildId/delete', async (request, response) => {
+router.delete('/delete/:guildId', async (request, response) => {
     const { guildId } = request.params;
     const { tagName } = request.body;
     response.json({
@@ -68,7 +69,7 @@ router.delete('/:guildId/delete', async (request, response) => {
     })
 })
 
-router.put('/:guildId/edit', async (request, response) => {
+router.put('/edit/:guildId', async (request, response) => {
     const { guildId } = request.params;
     const { tagName, tagContent } = request.body;
     response.json({
@@ -79,7 +80,7 @@ router.put('/:guildId/edit', async (request, response) => {
     })
 })
 
-router.put('/:guildId/increment', async (request, response) => {
+router.put('/increment/:guildId', async (request, response) => {
     const { guildId } = request.params;
     const { tagName } = request.body;
     response.json({
@@ -89,17 +90,7 @@ router.put('/:guildId/increment', async (request, response) => {
     })
 })
 
-router.put('/:guildId/decrement', async (request, response) => {
-    const { guildId } = request.params;
-    const { tagName } = request.body;
-    response.json({
-        operation: 'Guild decrement tag',
-        guildId: guildId,
-        tagName: tagName
-    })
-})
-
-router.delete('/:guildId/purge', async (request, response) => {
+router.delete('/purge/:guildId', async (request, response) => {
     const { guildId } = request.params;
     response.json({
         operation: 'Guild purge',
