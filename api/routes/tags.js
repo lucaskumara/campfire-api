@@ -2,6 +2,21 @@ const express = require('express');
 
 const router = express.Router();
 
+router.get('/guilds', async (request, response) => {
+    const database = request.app.locals.db;
+    const collection = database.collection('tags');
+
+    // Get all documents
+    const cursor = collection.find({});
+
+    const documentArray = await cursor.toArray();
+
+    response.status = 200;
+    response.json(documentArray.map((document) => {
+        return document.guild_id
+    }))
+})
+
 router.get('/count/:guildId', async (request, response) => {
     const guildId = parseInt(request.params.guildId);
 
@@ -64,14 +79,7 @@ router.get('/list/:guildId', async (request, response) => {
 
     response.status = 200;
     response.json(tagArray.map((document) => {
-        return {
-            name: document.tags.name,
-            content: document.tags.content,
-            author_id: document.tags.author_id,
-            created_at_iso: document.tags.created_at_iso,
-            modified_at_iso: document.tags.modified_at_iso,
-            uses: document.tags.uses
-        }
+        return document.tags;
     }))
 })
 
@@ -93,40 +101,29 @@ router.get('/list/:guildId/:memberId', async (request, response) => {
 
     response.status = 200;
     response.json(tagArray.map((document) => {
-        return {
-            name: document.tags.name,
-            content: document.tags.content,
-            author_id: document.tags.author_id,
-            created_at_iso: document.tags.created_at_iso,
-            modified_at_iso: document.tags.modified_at_iso,
-            uses: document.tags.uses
-        }
+        return document.tags;
     }))
 })
 
-router.get('/get/:guildId', async (request, response) => {
+router.get('/get/:guildId/:tagName', async (request, response) => {
     const guildId = parseInt(request.params.guildId);
-    const tagName = request.body.tagName;
+    const tagName = request.params.tagName;
 
     const database = request.app.locals.db;
     const collection = database.collection('tags');
 
-    // Pull all tags associated with the guild with the tag name
+    // Pull the tag with the specified name that is associated with the guild
     const cursor = collection.aggregate([
         { $match: { 'guild_id': guildId } },
         { $unwind: '$tags' },
-        { $match: { 'tags.name': tagName } }
+        { $match: { 'tags.name': tagName } },
+        { $limit: 1 }
     ])
 
     const tagArray = await cursor.toArray();
 
     response.status = 200;
-    response.json(tagArray.map((document) => {
-        return {
-            name: document.tags.name,
-            content: document.tags.content,
-        }
-    }))
+    response.json(tagArray[0].tags);
 })
 
 router.post('/create/:guildId', async (request, response) => {
@@ -165,9 +162,9 @@ router.post('/create/:guildId', async (request, response) => {
     })
 })
 
-router.delete('/delete/:guildId', async (request, response) => {
+router.delete('/delete/:guildId/:tagName', async (request, response) => {
     const guildId = parseInt(request.params.guildId);
-    const tagName = request.body.tagName;
+    const tagName = request.params.tagName;
 
     const database = request.app.locals.db;
     const collection = database.collection('tags');
@@ -190,9 +187,9 @@ router.delete('/delete/:guildId', async (request, response) => {
     })
 })
 
-router.put('/edit/:guildId', async (request, response) => {
+router.patch('/edit/:guildId/:tagName', async (request, response) => {
     const guildId = parseInt(request.params.guildId);
-    const tagName = request.body.tagName;
+    const tagName = request.params.tagName;
     const tagContent = request.body.tagContent;
 
     const database = request.app.locals.db;
@@ -218,9 +215,9 @@ router.put('/edit/:guildId', async (request, response) => {
     })
 })
 
-router.put('/increment/:guildId', async (request, response) => {
+router.patch('/increment/:guildId/:tagName', async (request, response) => {
     const guildId = parseInt(request.params.guildId);
-    const tagName = request.body.tagName;
+    const tagName = request.params.tagName;
 
     const database = request.app.locals.db;
     const collection = database.collection('tags');
