@@ -2,145 +2,102 @@ const express = require('express');
 
 const router = express.Router();
 
-router.get('/guilds', async (request, response) => {
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
+function getCollection(request) {
+    return request.app.locals.db.collection('tags');
+}
 
-    // Get all documents
-    const cursor = collection.find({});
+async function getGuilds(request) {
+    const collection = getCollection(request)
+    const cursor = collection.find({}).project({ 'guild_id': 1, _id: 0 });
+    const guildDocumentsArray = await cursor.toArray();
 
-    const documentArray = await cursor.toArray();
+    return guildDocumentsArray.map((document) => {
+        return document.guild_id;
+    })
+}
 
-    response.status = 200;
-    response.json(documentArray.map((document) => {
-        return document.guild_id
-    }))
-})
+async function getTagCount(request, guildID, memberID = null) {
+    const collection = getCollection(request);
+    let pipeline;
 
-router.get('/count/:guildId', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
+    switch (memberID) {
+        case null:
+            pipeline = [
+                { $match: { 'guild_id': guildID } },
+                { $unwind: '$tags' },
+                { $count: 'tag_count' }
+            ]
+            break;
+        default:
+            pipeline = [
+                { $match: { 'guild_id': guildID } },
+                { $unwind: '$tags' },
+                { $match: { 'tags.author_id': memberID } },
+                { $count: 'tag_count' }
+            ]
+            break;
+    }
 
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
-    // Count the tags associated with the guild
-    const cursor = collection.aggregate([
-        { $match: { 'guild_id': guildId } },
-        { $unwind: '$tags' },
-        { $count: 'tag_count' }
-    ])
-
+    const cursor = collection.aggregate(pipeline);
     const tagCountArray = await cursor.toArray();
     const tagCount = tagCountArray.length == 0 ? 0 : tagCountArray[0].tag_count;
 
-    response.status = 200;
-    response.json({
-        tag_count: tagCount
-    })
-})
+    return tagCount;
+}
 
-router.get('/count/:guildId/:memberId', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const memberId = parseInt(request.params.memberId);
+async function getTagList(request, guildID, memberID = null) {
+    const collection = getCollection(request);
+    let pipeline;
 
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
+    switch (memberID) {
+        case null:
+            pipeline = [
+                { $match: { 'guild_id': guildID } },
+                { $unwind: '$tags' }
+            ]
+            break;
+        default:
+            pipeline = [
+                { $match: { 'guild_id': guildID } },
+                { $unwind: '$tags' },
+                { $match: { 'tags.author_id': memberID } }
+            ]
+            break;
+    }
 
-    // Count the tags associated with the guild authored by the member
-    const cursor = collection.aggregate([
-        { $match: { 'guild_id': guildId } },
-        { $unwind: '$tags' },
-        { $match: { 'tags.author_id': memberId } },
-        { $count: 'tag_count' }
-    ])
-
-    const tagCountArray = await cursor.toArray();
-    const tagCount = tagCountArray.length == 0 ? 0 : tagCountArray[0].tag_count;
-
-    response.status = 200;
-    response.json({
-        tag_count: tagCount
-    })
-})
-
-router.get('/list/:guildId', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
-    // Pull all tags associated with the guild
-    const cursor = collection.aggregate([
-        { $match: { 'guild_id': guildId } },
-        { $unwind: '$tags' }
-    ])
-
+    const cursor = collection.aggregate(pipeline).project({ 'tags': 1, _id: 0 });
     const tagArray = await cursor.toArray();
 
-    response.status = 200;
-    response.json(tagArray.map((document) => {
-        return document.tags;
-    }))
-})
+    return tagArray.map((document) => {
+        return document.tags
+    })
+}
 
-router.get('/list/:guildId/:memberId', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const memberId = parseInt(request.params.memberId);
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
-    // Pull all tags associated with the guild authored by the member
+async function getTag(request, guildID, tagName) {
+    const collection = getCollection(request);
     const cursor = collection.aggregate([
-        { $match: { 'guild_id': guildId } },
-        { $unwind: '$tags' },
-        { $match: { 'tags.author_id': memberId } }
-    ])
-
-    const tagArray = await cursor.toArray();
-
-    response.status = 200;
-    response.json(tagArray.map((document) => {
-        return document.tags;
-    }))
-})
-
-router.get('/get/:guildId/:tagName', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const tagName = request.params.tagName;
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
-    // Pull the tag with the specified name that is associated with the guild
-    const cursor = collection.aggregate([
-        { $match: { 'guild_id': guildId } },
+        { $match: { 'guild_id': guildID } },
         { $unwind: '$tags' },
         { $match: { 'tags.name': tagName } },
         { $limit: 1 }
     ])
-
     const tagArray = await cursor.toArray();
 
-    response.status = 200;
-    response.json(tagArray[0].tags);
-})
+    switch (tagArray.length) {
+        case 0:
+            return null;
+        default:
+            return tagArray[0].tags;
+    }
+}
 
-router.post('/create/:guildId', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const tagName = request.body.tagName;
-    const tagContent = request.body.tagContent;
-    const tagAuthorID = request.body.tagAuthorID;
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
+async function createTag(request, guildID, tagName, tagContent, tagAuthorID) {
+    const collection = getCollection(request);
     const creationTime = new Date();
     const creationTimeISO = creationTime.toISOString();
 
-    // Update the guild tags list to contain the specified tag
     await collection.updateOne(
-        { 'guild_id': guildId },
+        { 'guild_id': guildID },
         {
             $push: {
                 tags: {
@@ -155,23 +112,13 @@ router.post('/create/:guildId', async (request, response) => {
         },
         { upsert: true }
     )
+}
 
-    response.status = 200;
-    response.json({
-        message: 'Tag created successfully'
-    })
-})
+async function deleteTag(request, guildID, tagName) {
+    const collection = getCollection(request);
 
-router.delete('/delete/:guildId/:tagName', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const tagName = request.params.tagName;
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
-    // Update the guild tags list to remove the specified tag
     await collection.updateOne(
-        { 'guild_id': guildId },
+        { 'guild_id': guildID },
         {
             $pull: {
                 tags: {
@@ -180,27 +127,15 @@ router.delete('/delete/:guildId/:tagName', async (request, response) => {
             }
         }
     )
+}
 
-    response.status = 200;
-    response.json({
-        message: 'Tag deleted successfully'
-    })
-})
-
-router.patch('/edit/:guildId/:tagName', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const tagName = request.params.tagName;
-    const tagContent = request.body.tagContent;
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
-
+async function editTag(request, guildID, tagName, tagContent) {
+    const collection = getCollection(request);
     const modifiedTime = new Date();
     const modifiedTimeISO = modifiedTime.toISOString();
 
-    // Update the specified tag to edit its contents
     await collection.updateOne(
-        { 'guild_id': guildId, 'tags.name': tagName },
+        { 'guild_id': guildID, 'tags.name': tagName },
         {
             $set: {
                 'tags.$.content': tagContent,
@@ -208,51 +143,179 @@ router.patch('/edit/:guildId/:tagName', async (request, response) => {
             }
         }
     )
+}
 
-    response.status = 200;
-    response.json({
-        message: 'Tag edited successfully'
-    })
-})
-
-router.patch('/increment/:guildId/:tagName', async (request, response) => {
-    const guildId = parseInt(request.params.guildId);
-    const tagName = request.params.tagName;
-
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
+async function incrementTagUses(request, guildID, tagName) {
+    const collection = getCollection(request);
 
     // Update the specified tag to increment its uses by 1
     await collection.updateOne(
-        { 'guild_id': guildId, 'tags.name': tagName },
+        { 'guild_id': guildID, 'tags.name': tagName },
         {
             $inc: {
                 'tags.$.uses': 1
             }
         }
     )
+}
 
-    response.status = 200;
-    response.json({
-        message: 'Tag uses incremented successfully'
+async function purgeGuildData(request, guildID) {
+    const collection = getCollection(request);
+
+    await collection.deleteOne(
+        { guild_id: guildID }
+    )
+}
+
+router.get('/guilds', async (request, response) => {
+    const guildIDs = await getGuilds(request);
+
+    response.status(200).json(guildIDs);
+})
+
+router.get('/count/:guildId', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tagCount = await getTagCount(request, guildID);
+
+    response.status(200).json({
+        tag_count: tagCount
     })
+})
+
+router.get('/count/:guildId/:memberId', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const memberID = parseInt(request.params.memberId);
+    const tagCount = await getTagCount(request, guildID, memberID);
+
+    response.status(200).json({
+        tag_count: tagCount
+    })
+})
+
+router.get('/list/:guildId', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tags = await getTagList(request, guildID);
+
+    response.status(200).json(tags)
+})
+
+router.get('/list/:guildId/:memberId', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const memberID = parseInt(request.params.memberId);
+    const tags = await getTagList(request, guildID, memberID);
+
+    response.status(200).json(tags)
+})
+
+router.get('/get/:guildId/:tagName', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tagName = request.params.tagName;
+    const tag = await getTag(request, guildID, tagName);
+
+    if (tag == null) {
+        response.status(404).json({
+            message: 'Tag not found'
+        })
+    } else {
+        response.status(200).json(tag);
+    }
+})
+
+router.post('/create/:guildId', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tagName = request.body.tagName;
+    const tagContent = request.body.tagContent;
+    const tagAuthorID = request.body.tagAuthorID;
+
+    const tag = await getTag(request, guildID, tagName);
+
+    if (tag == null) {
+        await createTag(request, guildID, tagName, tagContent, tagAuthorID);
+
+        response.status(200).json({
+            message: 'Tag created successfully'
+        })
+    } else {
+        response.status(409).json({
+            message: 'Tag already exists'
+        })
+    }
+})
+
+router.delete('/delete/:guildId/:tagName', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tagName = request.params.tagName;
+
+    const tag = await getTag(request, guildID, tagName);
+
+    if (tag != null) {
+        await deleteTag(request, guildID, tagName);
+
+        response.status(200).json({
+            message: 'Tag deleted successfully'
+        })
+    } else {
+        response.status(409).json({
+            message: 'Tag does not exist'
+        })
+    }
+})
+
+router.patch('/edit/:guildId/:tagName', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tagName = request.params.tagName;
+    const tagContent = request.body.tagContent;
+
+    const tag = await getTag(request, guildID, tagName);
+
+    if (tag != null) {
+        await editTag(request, guildID, tagName, tagContent);
+
+        response.status(200).json({
+            message: 'Tag edited successfully'
+        })
+    } else {
+        response.status(409).json({
+            message: 'Tag does not exist'
+        })
+    }
+})
+
+router.patch('/increment/:guildId/:tagName', async (request, response) => {
+    const guildID = parseInt(request.params.guildId);
+    const tagName = request.params.tagName;
+
+    const tag = await getTag(request, guildID, tagName);
+
+    if (tag != null) {
+        await incrementTagUses(request, guildID, tagName);
+
+        response.status(200).json({
+            message: 'Tag uses incremented successfully'
+        })
+    } else {
+        response.status(409).json({
+            message: 'Tag does not exist'
+        })
+    }
 })
 
 router.delete('/purge/:guildId', async (request, response) => {
     const guildID = parseInt(request.params.guildId);
 
-    const database = request.app.locals.db;
-    const collection = database.collection('tags');
+    const guilds = await getGuilds(request);
 
-    // Deletes all tag data regarding the guild
-    await collection.deleteOne(
-        { guild_id: guildID }
-    )
+    if (guilds.includes(guildID)) {
+        await purgeGuildData(request, guildID);
 
-    response.status = 200;
-    response.json({
-        message: 'Guild data deleted successfully'
-    })
+        response.status(200).json({
+            message: 'Guild data deleted successfully'
+        })
+    } else {
+        response.status(409).json({
+            message: 'Guild data does not exist'
+        })
+    }
 })
 
 module.exports = router
