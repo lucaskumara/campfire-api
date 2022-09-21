@@ -1,11 +1,23 @@
 const express = require('express');
+const mongodb = require('mongodb');
 
 const router = express.Router();
-
+/**
+ * Gets the database collection from the request.
+ * 
+ * @param {express.Request} request 
+ * @returns {mongodb.Collection}
+ */
 function getCollection(request) {
     return request.app.locals.db.collection('tags');
 }
 
+/**
+ * Gets a list of guilds that are present in the database.
+ * 
+ * @param {express.Request} request 
+ * @returns {Array.<integer>}
+ */
 async function getGuilds(request) {
     const collection = getCollection(request)
     const cursor = collection.find({}).project({ 'guild_id': 1, _id: 0 });
@@ -16,6 +28,15 @@ async function getGuilds(request) {
     })
 }
 
+/**
+ * Gets the number of tags in a guild. Optionally gets the number
+ * of tags in a guild authored by a member.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {integer} [memberID] 
+ * @returns {integer}
+ */
 async function getTagCount(request, guildID, memberID = null) {
     const collection = getCollection(request);
     let pipeline;
@@ -45,6 +66,15 @@ async function getTagCount(request, guildID, memberID = null) {
     return tagCount;
 }
 
+/**
+ * Gets a list of tags in a guild. Optionally gets a list
+ * of tags in a guild authored by a member.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {integer} [memberID] 
+ * @returns {Array.<Object>}
+ */
 async function getTagList(request, guildID, memberID = null) {
     const collection = getCollection(request);
     let pipeline;
@@ -73,6 +103,14 @@ async function getTagList(request, guildID, memberID = null) {
     })
 }
 
+/**
+ * Gets a tag from a guild.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {integer} tagName 
+ * @returns {Object}
+ */
 async function getTag(request, guildID, tagName) {
     const collection = getCollection(request);
     const cursor = collection.aggregate([
@@ -91,6 +129,15 @@ async function getTag(request, guildID, tagName) {
     }
 }
 
+/**
+ * Creates a tag in a guild.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {string} tagName 
+ * @param {string} tagContent 
+ * @param {integer} tagAuthorID 
+ */
 async function createTag(request, guildID, tagName, tagContent, tagAuthorID) {
     const collection = getCollection(request);
     const creationTime = new Date();
@@ -114,6 +161,13 @@ async function createTag(request, guildID, tagName, tagContent, tagAuthorID) {
     )
 }
 
+/**
+ * Deletes a tag in a guild.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {string} tagName 
+ */
 async function deleteTag(request, guildID, tagName) {
     const collection = getCollection(request);
 
@@ -129,6 +183,14 @@ async function deleteTag(request, guildID, tagName) {
     )
 }
 
+/**
+ * Edits a tag in a guild.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {string} tagName 
+ * @param {string} tagContent 
+ */
 async function editTag(request, guildID, tagName, tagContent) {
     const collection = getCollection(request);
     const modifiedTime = new Date();
@@ -145,6 +207,13 @@ async function editTag(request, guildID, tagName, tagContent) {
     )
 }
 
+/**
+ * Increments the number of uses of a tag in a guild.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ * @param {string} tagName 
+ */
 async function incrementTagUses(request, guildID, tagName) {
     const collection = getCollection(request);
 
@@ -159,6 +228,12 @@ async function incrementTagUses(request, guildID, tagName) {
     )
 }
 
+/**
+ * Purges all information about a guild from the db.
+ * 
+ * @param {express.Request} request 
+ * @param {integer} guildID 
+ */
 async function purgeGuildData(request, guildID) {
     const collection = getCollection(request);
 
