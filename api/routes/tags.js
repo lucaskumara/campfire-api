@@ -2,6 +2,7 @@ const express = require('express');
 const mongodb = require('mongodb');
 
 const router = express.Router();
+
 /**
  * Gets the database collection from the request.
  * 
